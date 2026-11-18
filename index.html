@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Upload arena</title>
+<style>
+:root{--surface-1:#f7f7f5;--surface-2:#fff;--bg-neutral:#f0efea;--text-primary:#1d1d1f;--text-secondary:#5f5e5a;--text-muted:#a3a29b;--text-success:#0f6e56;--text-danger:#a32d2d;--text-warning:#854f0b;--border:rgba(0,0,0,.1);--border-strong:rgba(0,0,0,.18);--border-stronger:rgba(0,0,0,.35);--font-sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--font-mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+@media (prefers-color-scheme:dark){:root{--surface-1:#1f1f1e;--surface-2:#2a2a28;--bg-neutral:#333331;--text-primary:#f1efe8;--text-secondary:#b4b2a9;--text-muted:#6f6e69;--text-success:#5dcaa5;--text-danger:#f09595;--text-warning:#ef9f27;--border:rgba(255,255,255,.1);--border-strong:rgba(255,255,255,.18);--border-stronger:rgba(255,255,255,.35)}}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:grid;place-items:center;padding:16px;background:var(--surface-1);color:var(--text-primary);font-family:var(--font-sans)}
+button{font:inherit;font-size:12px;height:32px;padding:0 10px;cursor:pointer;color:var(--text-primary);background:transparent;border:.5px solid var(--border-strong);border-radius:8px;display:inline-flex;align-items:center;gap:4px}
+button:hover{background:var(--surface-1)}
+.icon{width:1em;height:1em;vertical-align:-.15em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.bb{position:relative;width:min(420px,100%);height:580px;padding:1rem;border:.5px solid var(--border);border-radius:12px;background:var(--surface-2);overflow:hidden;user-select:none;-webkit-user-select:none}
+.file{position:absolute;left:0;top:0;width:48px;height:60px;z-index:5;cursor:grab;touch-action:none}
+.file.held{z-index:6;cursor:grabbing}
+.file small{position:absolute;top:63px;left:50%;transform:translateX(-50%);font-size:11px;color:var(--text-secondary);background:var(--surface-2);padding:0 6px;border-radius:999px;white-space:nowrap;transition:opacity .15s}
+.file.flying small{opacity:0}
+.sh{position:absolute;left:0;top:0;width:40px;height:8px;border-radius:50%;background:var(--text-primary);z-index:1;pointer-events:none}
+.hoop.swish .net{animation:sw .5s ease-out}
+@keyframes sw{35%{transform:scale(.86,1.28)}65%{transform:scale(1.05,.93)}}
+.sb div{text-align:center;padding:2px 8px}
+.sb small{display:block;font-size:11px;color:#b4b2a9}
+.sb b{display:block;font-family:var(--font-mono);font-size:18px;font-weight:500;color:#fac775;line-height:1.2}
+.toast{display:grid;grid-template-columns:auto minmax(0,1fr) 110px;gap:10px;align-items:center;background:var(--surface-2);border:.5px solid var(--border);border-radius:12px;padding:8px 12px;animation:up .35s ease-out}
+.toast.out{animation:dn .35s ease-in forwards}
+@keyframes up{from{opacity:0;transform:translateY(16px)}}
+@keyframes dn{to{opacity:0;transform:translateY(16px)}}
+</style>
+</head>
+<body>
+<div class="bb" id="card">
+<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+<div>
+<p style="font-size:16px;font-weight:500;margin:0">Upload arena</p>
+<p style="font-size:12px;color:var(--text-secondary);margin:2px 0 8px">Marquez pour envoyer</p>
+<div style="display:flex;gap:6px">
+<button id="browse"><svg class="icon" viewBox="0 0 24 24"><path d="M5 4h4l3 3h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2"/></svg> Parcourir</button>
+<button id="demo"><svg class="icon" viewBox="0 0 24 24"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2"/><path d="M12 11v6M9 14h6"/></svg> Test</button>
+<input type="file" id="input" multiple hidden>
+</div>
+</div>
+<div class="sb" style="display:flex;background:#2c2c2a;border-radius:8px;padding:4px 2px">
+<div><small>Paniers</small><b id="sent">0</b></div>
+<div><small>Tirs</small><b id="shots">0</b></div>
+<div><small>Série</small><b id="streak">0</b></div>
+</div>
+</div>
+<div id="court" style="position:absolute;inset:96px 0 0 0">
+<p style="position:absolute;top:14px;width:100%;text-align:center;font-size:12px;color:var(--text-secondary);margin:0"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg> Lancez d'un geste vif vers le haut</p>
+<div style="position:absolute;left:calc(50% - 5px);top:140px;width:10px;height:140px;background:#5f5e5a;border-radius:2px"></div>
+<svg width="150" height="100" viewBox="0 0 150 100" style="position:absolute;left:50%;top:44px;transform:translateX(-50%)"><rect x="2" y="2" width="146" height="96" rx="8" fill="var(--surface-2)" stroke="#d85a30" stroke-width="4"/><rect x="50" y="52" width="50" height="34" rx="2" fill="none" stroke="#d85a30" stroke-width="3"/></svg>
+<svg id="rimBack" width="112" height="18" viewBox="0 0 112 18" style="position:absolute;left:50%;top:126px;transform:translateX(-50%);z-index:1"><path d="M4 9 A52 6 0 0 1 108 9" fill="none" stroke="#993c1d" stroke-width="5" stroke-linecap="round"/></svg>
+<svg id="floor" height="120" style="position:absolute;left:0;top:280px;width:100%"></svg>
+<span style="position:absolute;left:10px;top:286px;font-size:11px;font-weight:500;color:#633806">Zone de tir</span>
+<div class="hoop" id="hoop" style="position:absolute;left:50%;top:126px;width:112px;height:90px;transform:translateX(-50%);z-index:3;pointer-events:none">
+<svg class="net" id="net" width="112" height="72" viewBox="0 0 112 72" style="position:absolute;top:9px;left:0;transform-origin:top center"></svg>
+<svg width="112" height="18" viewBox="0 0 112 18" style="position:absolute;top:0;left:0"><path d="M4 9 A52 6 0 0 0 108 9" fill="none" stroke="#d85a30" stroke-width="5" stroke-linecap="round"/></svg>
+</div>
+<p id="status" style="position:absolute;top:238px;width:100%;text-align:center;font-size:14px;font-weight:500;margin:0"></p>
+</div>
+<div id="dock" style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);width:92%;z-index:7"></div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const card=$('card'),court=$('court'),hoop=$('hoop'),dock=$('dock'),status=$('status'),input=$('input');
+const G=1400,R=24,HH=30,E=.55,K=.5,MAX=1500,CONF=['#d85a30','#ef9f27','#1d9e75','#534ab7','#d4537e'];
+const ICON_UPLOAD='<svg class="icon" viewBox="0 0 24 24"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2"/><path d="M12 17v-6M9.5 13.5 12 11l2.5 2.5"/></svg>';
+const ICON_CHECK='<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m9 12 2 2 4-4"/></svg>';
+let balls=[],sent=0,shots=0,streak=0,geo,running=false,last=0,stT;
+(()=>{const t=[],b=[];for(let i=0;i<=8;i++){t.push(4+i*13);b.push(22+i*8.5)}let d='';
+for(let i=0;i<8;i++)d+=`M${t[i]} 2 L${b[i+1]} 64 M${t[i+1]} 2 L${b[i]} 64 `;
+for(let r=1;r<=3;r++){const k=r/4,y=2+62*k;d+=`M${4+18*k} ${y} Q56 ${y+4} ${108-18*k} ${y} `}
+for(let i=0;i<8;i++)d+=`M${b[i]} 64 Q${(b[i]+b[i+1])/2} 70 ${b[i+1]} 64 `;
+$('net').innerHTML=`<path d="${d}" fill="none" stroke="var(--text-muted)" stroke-width="1.3" stroke-linecap="round"/>`})();
+function measure(){const c=court.getBoundingClientRect(),r=$('rimBack').getBoundingClientRect();geo={W:c.width,floor:400,line:280,rimY:r.top-c.top+9,L:r.left-c.left+4,Rr:r.right-c.left-4,cx:r.left-c.left+r.width/2}}
+function buildFloor(){const W=geo.W,cx=geo.cx;let s=`<rect width="${W}" height="120" fill="#ef9f27"/>`;
+for(let x=0,i=0;x<W;x+=28,i++){s+=`<line x1="${x}" y1="0" x2="${x}" y2="116" stroke="#ba7517" stroke-opacity=".45"/>`;const j=(i%3)*35+20;s+=`<line x1="${x}" y1="${j}" x2="${x+28}" y2="${j}" stroke="#ba7517" stroke-opacity=".3"/>`}
+s+=`<path d="M${cx-70} 0 A70 70 0 0 0 ${cx+70} 0" fill="none" stroke="#fff" stroke-width="2.5" stroke-opacity=".9"/><line x1="0" y1="1.5" x2="${W}" y2="1.5" stroke="#fff" stroke-width="3"/><rect y="116" width="${W}" height="4" fill="#ba7517"/>`;
+$('floor').setAttribute('viewBox',`0 0 ${W} 120`);$('floor').innerHTML=s}
+measure();buildFloor();addEventListener('resize',()=>{measure();buildFloor()});
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const tween=(ms,fn,ease=t=>t)=>new Promise(res=>{const t0=performance.now();const st=n=>{const t=Math.min((n-t0)/ms,1);fn(ease(t));t<1?requestAnimationFrame(st):res()};requestAnimationFrame(st)});
+const fmt=b=>b>=1e6?(b/1e6).toFixed(1)+' MB':Math.max(1,Math.round(b/1e3))+' KB';
+const colors={PDF:'#e24b4a',PNG:'#1d9e75',JPG:'#1d9e75',ZIP:'#534ab7',DOCX:'#378add'};
+function say(msg,color){status.textContent=msg;status.style.color=color||'var(--text-secondary)';clearTimeout(stT);stT=setTimeout(()=>status.textContent='',1800)}
+function stats(){$('sent').textContent=sent;$('shots').textContent=shots;$('streak').textContent=streak}
+const doc=(ext,c)=>{const w=ext.length*7+8;return `<svg width="48" height="60" viewBox="0 0 48 60" style="display:block"><path d="M6 2h26l12 12v40a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V6a4 4 0 0 1 4-4z" fill="var(--surface-2)" stroke="var(--border-stronger)"/><path d="M32 2v8a4 4 0 0 0 4 4h8" fill="var(--bg-neutral)" stroke="var(--border-stronger)"/><rect x="9" y="20" width="22" height="3" rx="1.5" fill="var(--border-strong)"/><rect x="9" y="27" width="30" height="3" rx="1.5" fill="var(--border-strong)"/><rect x="9" y="34" width="18" height="3" rx="1.5" fill="var(--border-strong)"/><rect x="6" y="43" width="${w}" height="12" rx="3" fill="${c}"/><text x="${6+w/2}" y="52" text-anchor="middle" font-size="9" font-weight="500" fill="#fff" font-family="var(--font-sans)">${ext}</text></svg>`};
+function render(b,s=1){b.el.style.transform=`translate(${b.x-24}px,${b.y-30}px) rotate(${b.rot}deg) scale(${s})`;b.el.classList.toggle('flying',b.state==='fly'||b.state==='score');
+const k=clamp(1-(geo.floor-HH-b.y)/260,.25,1);b.sh.style.transform=`translate(${b.x-20}px,${geo.floor-6}px) scale(${k})`;b.sh.style.opacity=.14*k}
+function createBall(name,size,x,y,falling){const el=document.createElement('div');el.className='file';const ext=(name.split('.').pop()||'FILE').toUpperCase().slice(0,4);
+el.innerHTML=doc(ext,colors[ext]||'#888780')+`<small>${name}</small>`;const sh=document.createElement('div');sh.className='sh';court.appendChild(sh);court.appendChild(el);
+const b={el,sh,name,size,x,y,vx:0,vy:0,rot:0,state:falling?'fly':'idle',shot:false};balls.push(b);render(b);bindDrag(b);if(falling)kick();return b}
+function bindDrag(b){let ox,oy,samples=[];
+const throwIt=()=>{b.el.classList.remove('held');const t=performance.now();while(samples.length>1&&t-samples[0].t>90)samples.shift();const s=samples[0],dt=(t-s.t)/1000;let vx=0,vy=0;
+if(dt>.01){const l=samples[samples.length-1];vx=(l.x-s.x)/dt*K;vy=(l.y-s.y)/dt*K}const sp=Math.hypot(vx,vy);if(sp>MAX){vx*=MAX/sp;vy*=MAX/sp}
+Object.assign(b,{vx,vy,state:'fly',shot:vy<-250,above:false,hitRim:false,hitTop:false});if(b.shot){shots++;stats()}kick()};
+b.el.addEventListener('pointerdown',e=>{if(b.state!=='idle')return;measure();b.state='drag';b.el.setPointerCapture(e.pointerId);b.el.classList.add('held');const c=court.getBoundingClientRect();ox=e.clientX-c.left-b.x;oy=e.clientY-c.top-b.y;samples=[{x:b.x,y:b.y,t:performance.now()}]});
+b.el.addEventListener('pointermove',e=>{if(b.state!=='drag')return;const c=court.getBoundingClientRect(),rx=e.clientX-c.left-ox,ry=e.clientY-c.top-oy,t=performance.now();samples.push({x:rx,y:ry,t});while(samples.length>2&&t-samples[0].t>90)samples.shift();
+b.x=clamp(rx,R,geo.W-R);if(ry<geo.line+HH){b.y=geo.line+HH;render(b);throwIt();return}b.y=clamp(ry,geo.line+HH,geo.floor-HH);render(b)});
+const up=()=>{if(b.state==='drag')throwIt()};b.el.addEventListener('pointerup',up);b.el.addEventListener('pointercancel',up)}
+function kick(){if(!running){running=true;last=performance.now();requestAnimationFrame(loop)}}
+function loop(now){const dt=Math.min((now-last)/1000,1/30);last=now;let active=false;for(const b of balls){if(b.state!=='fly')continue;active=true;for(let i=0;i<4&&b.state==='fly';i++)step(b,dt/4);if(b.state==='fly'||b.state==='idle')render(b)}active?requestAnimationFrame(loop):running=false}
+function step(b,h){const py=b.y;b.vy+=G*h;b.x+=b.vx*h;b.y+=b.vy*h;b.rot+=b.vx*h*.6;
+if(b.y<geo.rimY-R)b.above=true;
+if(b.x<R){b.x=R;b.vx=Math.abs(b.vx)*.6}if(b.x>geo.W-R){b.x=geo.W-R;b.vx=-Math.abs(b.vx)*.6}
+if(b.y<HH){b.y=HH;b.vy=Math.abs(b.vy)*.5;b.hitTop=true}
+const inWin=b.x>geo.L&&b.x<geo.Rr;
+if(inWin&&py<geo.rimY&&b.y>=geo.rimY&&b.vy>0&&b.above){score(b);return}
+if(inWin&&py>geo.rimY&&b.y<=geo.rimY&&b.vy<0){b.y=geo.rimY+1;b.vy=Math.abs(b.vy)*.3}
+for(const px of [geo.L,geo.Rr]){const dx=b.x-px,dy=b.y-geo.rimY,d=Math.hypot(dx,dy),m=R*.75+4;if(d<m&&d>0){const nx=dx/d,ny=dy/d;b.x=px+nx*m;b.y=geo.rimY+ny*m;const vn=b.vx*nx+b.vy*ny;if(vn<0){b.vx-=(1+E)*vn*nx;b.vy-=(1+E)*vn*ny;if(Math.abs(vn)>120)hoop.animate([{transform:'translateX(-50%) translateY(0)'},{transform:'translateX(-50%) translateY(3px)'},{transform:'translateX(-50%) translateY(0)'}],{duration:200});b.hitRim=true}}}
+if(b.y>geo.floor-HH){b.y=geo.floor-HH;if(b.vy>0)b.vy=-b.vy*.4;b.vx*=.85;if(Math.abs(b.vy)<80)b.vy=0;if(b.vy===0&&Math.abs(b.vx)<20)rest(b)}}
+function rest(b){b.state='idle';b.vx=b.vy=0;b.rot=0;render(b);if(!b.shot)return;b.shot=false;streak=0;stats();
+if(b.hitTop)say('Trop fort !','var(--text-danger)');else if(!b.above)say('Trop court…','var(--text-danger)');else if(b.hitRim)say("Sur l'arceau… raté",'var(--text-warning)');else say('À côté !','var(--text-danger)')}
+function burst(){for(let i=0;i<18;i++){const p=document.createElement('i');p.style.cssText=`position:absolute;left:0;top:0;width:6px;height:9px;background:${CONF[i%5]};border-radius:1px;z-index:6;pointer-events:none`;court.appendChild(p);
+const vx=(Math.random()-.5)*380,vy=-220-Math.random()*260,rot=(Math.random()-.5)*900;tween(950,t=>{const s=t*.95;p.style.transform=`translate(${geo.cx+vx*s}px,${geo.rimY-10+vy*s+650*s*s}px) rotate(${rot*t}deg)`;p.style.opacity=1-t*t}).then(()=>p.remove())}
+const pl=document.createElement('span');pl.textContent='+1';pl.style.cssText=`position:absolute;left:${geo.cx+40}px;top:${geo.rimY-30}px;font-size:20px;font-weight:500;color:#1d9e75;z-index:6;pointer-events:none`;court.appendChild(pl);
+tween(800,t=>{pl.style.transform=`translateY(${-40*t}px)`;pl.style.opacity=1-t}).then(()=>pl.remove())}
+async function score(b){b.state='score';b.el.style.zIndex=2;sent++;streak++;stats();
+say(streak>=3?`En feu ! Série de ${streak}`:b.hitRim?'Panier, de justesse !':'Swish !',streak>=3?'#d85a30':'var(--text-success)');
+hoop.classList.remove('swish');void hoop.offsetWidth;hoop.classList.add('swish');burst();const x0=b.x,y0=b.y,r0=b.rot;
+await tween(450,t=>{b.x=x0+(geo.cx-x0)*t;b.y=y0+95*t;b.rot=r0+40*t;render(b,.9-.4*t);b.el.style.opacity=t<.6?1:1-(t-.6)/.4},t=>t*t);
+b.el.remove();b.sh.remove();balls=balls.filter(x=>x!==b);upload(b.name,b.size)}
+async function upload(name,size){dock.innerHTML='';const t=document.createElement('div');t.className='toast';
+t.innerHTML=`<span class="ic" style="font-size:20px;color:#d85a30;display:flex">${ICON_UPLOAD}</span><div style="min-width:0"><p style="font-size:13px;font-weight:500;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</p><p style="font-size:11px;color:var(--text-secondary);margin:0">${fmt(size)}</p></div><div><p class="inf" style="font-size:11px;color:var(--text-secondary);margin:0 0 5px">Envoi… 0%</p><div style="height:4px;background:var(--bg-neutral);border-radius:2px;overflow:hidden"><i class="bar" style="display:block;height:100%;width:0;background:#d85a30;border-radius:2px"></i></div></div>`;
+dock.appendChild(t);const inf=t.querySelector('.inf'),bar=t.querySelector('.bar'),ic=t.querySelector('.ic');
+await tween(1400+Math.random()*800,p=>{const pc=Math.round(p*100);bar.style.width=pc+'%';inf.textContent=`Envoi… ${pc}%`},p=>1-Math.pow(1-p,2));
+if(!t.isConnected)return;inf.textContent='Envoyé';inf.style.color='var(--text-success)';bar.style.background='#1d9e75';ic.innerHTML=ICON_CHECK;ic.style.color='#1d9e75';
+await sleep(2500);if(!t.isConnected)return;t.classList.add('out');await sleep(350);t.remove()}
+const demos=['dummy_file.pdf','vacances.png','archive.zip','rapport.docx','photo.jpg'];let di=0;
+const rx=()=>R+Math.random()*(geo.W-2*R);
+$('demo').addEventListener('click',()=>{measure();createBall(demos[di++%demos.length],(0.3+Math.random()*4)*1e6,rx(),geo.line+HH,true)});
+$('browse').addEventListener('click',()=>input.click());
+input.addEventListener('change',async()=>{measure();for(const f of input.files){createBall(f.name,f.size,rx(),geo.line+HH,true);await sleep(200)}input.value=''});
+card.addEventListener('dragover',e=>e.preventDefault());
+card.addEventListener('drop',async e=>{e.preventDefault();measure();const c=court.getBoundingClientRect();for(const f of e.dataTransfer.files){createBall(f.name,f.size,clamp(e.clientX-c.left,R,geo.W-R),geo.line+HH,true);await sleep(200)}});
+createBall('dummy_file.pdf',2.4e6,50,geo.floor-HH,false);
+createBall('vacances.png',1.1e6,geo.W-50,geo.floor-HH,false);
+</script>
+</body>
+</html>
